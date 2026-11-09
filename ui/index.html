@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>ExitAI</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238f9dff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 4H6a2 2 0 00-2 2v12a2 2 0 002 2h4M14 8l4 4-4 4M18 12H9'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app" class="sb-open">
+
+  <!-- ============ Sidebar ============ -->
+  <aside id="sidebar" aria-label="Chats">
+    <div class="sb-inner">
+      <div class="sb-head">
+        <div class="brand"><span class="brand-mark" data-i="logo" data-s="18"></span><span class="brand-name">ExitAI</span></div>
+        <button id="btnSbClose" class="icon-btn" type="button" aria-label="Collapse sidebar (Ctrl+B)" title="Collapse sidebar (Ctrl+B)"><span data-i="sidebar"></span></button>
+      </div>
+      <button id="btnNew" class="new-chat" type="button" aria-label="New chat (Ctrl+N)">
+        <span data-i="plus" data-s="15"></span><span>New chat</span><kbd>Ctrl N</kbd>
+      </button>
+      <nav id="sessions" class="sessions" aria-label="Chat sessions"></nav>
+      <div class="sb-foot">
+        <div id="gpuBox" class="meter" hidden>
+          <div class="m-row"><span class="m-k"><span data-i="cpu" data-s="13"></span>GPU</span><span id="gpuName" class="m-name"></span><span id="gpuVal" class="m-val"></span></div>
+          <div class="bar" role="progressbar" aria-label="GPU memory used" aria-valuemin="0" aria-valuemax="100"><i id="gpuBar"></i></div>
+        </div>
+        <div id="ollamaBox" class="ollama">
+          <div class="m-row"><span id="ollDot" class="dot"></span><span id="ollText" class="m-name">Ollama</span></div>
+          <div id="ollLoaded" class="loaded"></div>
+        </div>
+        <div id="pullBox" class="pull" hidden>
+          <div class="m-row"><span data-i="download" data-s="13"></span><span id="pullName" class="m-name"></span><span id="pullPct" class="m-val"></span></div>
+          <div class="bar" role="progressbar" aria-label="Model download progress" aria-valuemin="0" aria-valuemax="100"><i id="pullBar"></i></div>
+          <div id="pullText" class="small"></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div id="scrim" aria-hidden="true"></div>
+  <div id="setScrim" class="set-scrim" aria-hidden="true"></div>
+
+  <!-- ============ Main ============ -->
+  <main id="main">
+    <header id="topbar">
+      <div class="tb-group tb-left">
+        <button id="btnSb" class="icon-btn" type="button" aria-label="Toggle sidebar (Ctrl+B)" title="Toggle sidebar (Ctrl+B)"><span data-i="sidebar"></span></button>
+        <div id="chatTitle" class="chat-title">New chat</div>
+      </div>
+      <div class="tb-group tb-right">
+        <div id="ctx" class="ctx" role="img" tabindex="0" aria-label="Context usage">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle class="ring-bg" cx="12" cy="12" r="9"/><circle id="ctxRing" class="ring" cx="12" cy="12" r="9" transform="rotate(-90 12 12)"/></svg>
+          <span id="ctxText" class="ctx-text"></span>
+        </div>
+        <button id="btnStop" class="stop" type="button" hidden aria-label="Stop (Esc)"><span data-i="stop" data-s="13"></span><span>Stop</span></button>
+        <button id="btnRp" class="icon-btn" type="button" aria-label="Toggle side panel (Ctrl+.)" title="Toggle side panel (Ctrl+.)"><span data-i="panel"></span><i id="rpDot" class="notify" hidden></i></button>
+      </div>
+    </header>
+
+    <div id="tlWrap">
+      <div id="empty" class="empty" hidden>
+        <div class="empty-in">
+          <div class="empty-mark" data-i="logo" data-s="30"></div>
+          <h1>What should we work on?</h1>
+          <p id="emptySub">Local model. Runs commands, edits files, browses the web.</p>
+          <div class="chips" id="chips"></div>
+          <div class="tips"><span><kbd>Ctrl K</kbd> focus</span><span><kbd>Ctrl N</kbd> new chat</span><span><kbd>Ctrl B</kbd> sidebar</span><span><kbd>Ctrl .</kbd> panel</span><span><kbd>Ctrl Shift F</kbd> files</span><span><kbd>Ctrl Shift M</kbd> settings</span></div>
+        </div>
+      </div>
+      <div id="timeline" role="log" aria-live="off" aria-label="Conversation"></div>
+    </div>
+    <button id="jump" class="jump" type="button" hidden aria-label="Jump to latest"><span data-i="arrowDown" data-s="14"></span><span>Latest</span></button>
+    <div id="dropOv" class="drop-ov" hidden><div><span data-i="download" data-s="22"></span><b>Drop files to attach</b><small>They are uploaded and added to your message</small></div></div>
+
+    <footer id="composer">
+      <div id="cmpBox" class="cmp-box">
+        <div id="chipBar" class="chip-bar" hidden></div>
+        <div id="attachBar" class="attach-bar" hidden></div>
+        <textarea id="input" rows="1" placeholder="Message ExitAI" aria-label="Message" spellcheck="true"></textarea>
+        <div class="cmp-row">
+          <button id="btnAttach" class="icon-btn" type="button" aria-label="Attach image" title="Attach image (or paste)"><span data-i="clip"></span></button>
+          <input id="fileIn" type="file" accept="image/*" multiple hidden>
+          <button id="btnAddFolder" class="icon-btn" type="button" aria-label="Add folder" title="Add folder: give the assistant access to a folder"><span data-i="folder"></span></button>
+          <button id="btnAttachFile" class="icon-btn" type="button" aria-label="Attach file" title="Attach file from your PC"><span data-i="clipDoc"></span></button>
+          <button id="setBtn" class="pill" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="setPop" aria-label="Chat settings (Ctrl+Shift+M)">
+            <span id="pillModel" class="pill-m">Model</span><span class="pill-dot" aria-hidden="true">·</span><span id="pillMode" class="pill-mode">Deep</span><span id="pillIcons" class="pill-ic" aria-hidden="true"></span><span class="pill-chev" data-i="chevD" data-s="12"></span>
+          </button>
+          <div id="setPop" class="pop" role="dialog" aria-label="Chat settings" hidden>
+            <div class="pop-row">
+              <span class="pop-l" id="lblModel">Model</span>
+              <button id="popModel" class="pop-model" type="button" aria-expanded="false" aria-controls="modelMenu" aria-labelledby="lblModel popModelName">
+                <span id="popModelName" class="pop-mn">Model</span><span id="popVis" class="tag vis" hidden></span><span data-i="chevD" data-s="13"></span>
+              </button>
+            </div>
+            <div id="popPull" class="pop-pull" hidden><div class="m-row"><span data-i="download" data-s="13"></span><span id="popPullName" class="m-name"></span><span id="popPullPct" class="m-val"></span></div><div class="bar"><i id="popPullBar"></i></div></div>
+            <div id="modelMenu" class="menu inline" role="listbox" aria-label="Choose model" hidden></div>
+            <div class="pop-row col">
+              <span class="pop-l" id="lblMode">Mode</span>
+              <div class="seg" role="group" aria-labelledby="lblMode">
+                <button type="button" data-mode="max" aria-pressed="false">Max</button>
+                <button type="button" data-mode="deep" aria-pressed="false">Deep</button>
+                <button type="button" data-mode="fast" aria-pressed="false">Fast</button>
+              </div>
+              <span id="modeHint" class="pop-hint"></span>
+            </div>
+            <div class="pop-row">
+              <label class="pop-l" for="thinkSel" title="How much the model reasons before answering">Thinking</label>
+              <select id="thinkSel" class="pop-sel"></select>
+            </div>
+            <div class="pop-row">
+              <label class="pop-l" for="showThinkSw">Show thinking</label>
+              <label class="switch"><input id="showThinkSw" type="checkbox" role="switch"><span class="track"><i></i></span></label>
+            </div>
+            <div class="pop-row">
+              <label class="pop-l" for="ctxSel" title="How much the model can remember at once. Bigger is smarter on long tasks but slower and uses more VRAM">Context</label>
+              <select id="ctxSel" class="pop-sel"><option value="16384">16k</option><option value="32768">32k</option><option value="65536">64k</option><option value="98304">96k</option><option value="131072">128k</option></select>
+            </div>
+            <div class="pop-row">
+              <label class="pop-l" for="autoSw" title="Run tools without asking for approval">Auto-approve</label>
+              <label class="switch"><input id="autoSw" type="checkbox" role="switch"><span class="track"><i></i></span></label>
+            </div>
+            <div class="pop-row">
+              <span class="pop-l" id="lblWs">Workspace</span>
+              <span id="popWs" class="pop-ws" aria-labelledby="lblWs"></span>
+              <button id="popWsBtn" class="btn sm" type="button">Change…</button>
+            </div>
+          </div>
+          <span id="attachWarn" class="warn-txt" hidden>This model has no vision</span>
+          <span class="hint">Enter to send, Shift+Enter for newline</span>
+          <button id="btnSend" class="send" type="button" aria-label="Send" disabled><span data-i="send" data-s="16"></span></button>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- ============ Right panel ============ -->
+  <aside id="rpanel" aria-label="Side panel">
+    <div class="rp-inner">
+      <div class="rp-head">
+        <div class="tabs" role="tablist" aria-label="Panel">
+          <button id="tabPlan" class="tab on" type="button" role="tab" aria-selected="true" aria-controls="panePlan" data-tab="plan">Plan <span id="planCount" class="count" hidden></span></button>
+          <button id="tabBr" class="tab" type="button" role="tab" aria-selected="false" aria-controls="paneBr" data-tab="browser">Browser <i id="brDot" class="notify" hidden></i></button>
+          <button id="tabFiles" class="tab" type="button" role="tab" aria-selected="false" aria-controls="paneFiles" data-tab="files">Files</button>
+        </div>
+        <button id="btnRpClose" class="icon-btn" type="button" aria-label="Close panel"><span data-i="x"></span></button>
+      </div>
+
+      <section id="panePlan" class="pane" role="tabpanel" aria-labelledby="tabPlan">
+        <ol id="planList" class="plan"></ol>
+        <div id="planEmpty" class="pane-empty"><span data-i="list" data-s="22"></span><p>No plan yet.</p><small>When the agent breaks a task into steps, they show up here.</small></div>
+      </section>
+
+      <section id="paneBr" class="pane" role="tabpanel" aria-labelledby="tabBr" hidden>
+        <div class="br-head">
+          <div class="br-id"><span id="brState" class="dot"></span><div class="br-txt"><div id="brTitle" class="br-title">Browser</div><div id="brUrl" class="br-url"></div></div></div>
+          <div class="badges">
+            <span id="bgErr" class="badge err" title="Errors" hidden></span>
+            <span id="bgCon" class="badge" title="Console messages" hidden></span>
+            <span id="bgNet" class="badge" title="Network requests" hidden></span>
+          </div>
+        </div>
+        <div class="subtabs" role="tablist" aria-label="Browser views">
+          <button type="button" class="stab on" role="tab" aria-selected="true" data-st="console">Console <span class="count" id="cCon"></span></button>
+          <button type="button" class="stab" role="tab" aria-selected="false" data-st="network">Network <span class="count" id="cNet"></span></button>
+          <button type="button" class="stab" role="tab" aria-selected="false" data-st="tree">DOM tree</button>
+          <button type="button" class="stab" role="tab" aria-selected="false" data-st="shot">Screenshot</button>
+        </div>
+        <div id="brBody" class="br-body">
+          <div id="vConsole" class="view console"></div>
+          <div id="vNetwork" class="view network" hidden></div>
+          <pre id="vTree" class="view tree" hidden></pre>
+          <div id="vShot" class="view shot" hidden>
+            <div class="shot-bar"><button id="shotRefresh" class="btn" type="button"><span data-i="refresh" data-s="13"></span>Refresh</button></div>
+            <div class="shot-box"><img id="shotImg" alt="Browser screenshot" hidden><div id="shotMsg" class="pane-empty">No screenshot yet.</div></div>
+          </div>
+          <div id="brClosed" class="pane-empty" hidden><span data-i="globe" data-s="22"></span><p>Browser is closed.</p><small>The agent opens it when it needs to browse a page.</small></div>
+        </div>
+      </section>
+
+      <section id="paneFiles" class="pane" role="tabpanel" aria-labelledby="tabFiles" hidden>
+        <div id="pickBanner" class="pick" hidden>
+          <span data-i="folder" data-s="15"></span><span id="pickText" class="pick-t"></span>
+          <span class="pick-btns"><button id="pickAdd" class="btn ok sm" type="button" hidden>Add this folder</button><button id="pickCancel" class="btn sm" type="button">Cancel</button></span>
+        </div>
+        <div id="flList" class="fl">
+          <div class="fl-bar">
+            <button id="flUp" class="icon-btn sm" type="button" aria-label="Up one folder" title="Up one folder"><span data-i="up" data-s="15"></span></button>
+            <button id="flDrives" class="icon-btn sm" type="button" aria-label="Drives" title="Drives"><span data-i="drive" data-s="15"></span></button>
+            <nav id="flCrumb" class="crumb" aria-label="Path"></nav>
+            <button id="flRefresh" class="icon-btn sm" type="button" aria-label="Refresh" title="Refresh"><span data-i="refresh" data-s="14"></span></button>
+          </div>
+          <div class="fl-bar2">
+            <input id="flFilter" class="fl-filter" type="search" placeholder="Filter this folder" aria-label="Filter files" autocomplete="off" spellcheck="false">
+            <button id="flNewFile" class="icon-btn sm" type="button" aria-label="New file" title="New file"><span data-i="filePlus" data-s="15"></span></button>
+            <button id="flNewDir" class="icon-btn sm" type="button" aria-label="New folder" title="New folder"><span data-i="folderPlus" data-s="15"></span></button>
+          </div>
+          <div class="fl-act">
+            <button id="flWs" class="btn sm" type="button" title="Make this folder the workspace">Use as workspace</button>
+            <button id="flAttDir" class="btn sm" type="button" title="Attach this folder to the chat">Attach this folder to chat</button>
+          </div>
+          <div id="flNew" class="fr editing" hidden></div>
+          <div id="flRows" class="fl-rows" role="list"></div>
+          <div id="flDrop" class="fl-drop" hidden><div><span data-i="download" data-s="22"></span><b>Drop to upload here</b></div></div>
+        </div>
+        <div id="flView" class="fv" hidden>
+          <div class="fv-bar">
+            <button id="fvBack" class="icon-btn sm" type="button" aria-label="Back to folder" title="Back"><span data-i="chevL" data-s="16"></span></button>
+            <div class="fv-name"><span id="fvName"></span><i id="fvDirty" class="dirty" title="Unsaved changes" hidden></i></div>
+            <span id="fvInfo" class="fv-info"></span>
+            <button id="fvAtt" class="icon-btn sm" type="button" aria-label="Attach to chat" title="Attach to chat"><span data-i="clip" data-s="15"></span></button>
+            <button id="fvReveal" class="icon-btn sm" type="button" aria-label="Reveal in Explorer" title="Reveal in Explorer"><span data-i="reveal" data-s="15"></span></button>
+            <button id="fvSave" class="btn ok sm" type="button" title="Save (Ctrl+S)">Save</button>
+          </div>
+          <div id="fvNote" class="fv-note" hidden></div>
+          <textarea id="fvText" class="fv-text" spellcheck="false" wrap="off" aria-label="File content" hidden></textarea>
+          <div id="fvImg" class="fv-img" hidden><img alt="Image preview"></div>
+          <div id="fvBin" class="fv-bin" hidden></div>
+        </div>
+      </section>
+    </div>
+  </aside>
+</div>
+
+<div id="upPill" class="up-pill" hidden><span class="spin" aria-hidden="true"></span><span id="upText"></span></div>
+<div id="toasts" aria-live="polite" aria-atomic="false"></div>
+
+<div id="screen401" class="screen" role="alertdialog" aria-labelledby="t401" hidden>
+  <div class="screen-card">
+    <span class="screen-ico" data-i="shield" data-s="26"></span>
+    <h2 id="t401">Token missing</h2>
+    <p>This page has no valid access token. Relaunch ExitAI with <code>start.cmd</code> so it opens with the token in the address.</p>
+    <button class="btn primary" type="button" onclick="location.reload()">Reload</button>
+  </div>
+</div>
+
+<div id="screenDown" class="screen" role="alertdialog" aria-labelledby="tDown" hidden>
+  <div class="screen-card">
+    <span class="spin lg" aria-hidden="true"></span>
+    <h2 id="tDown">Can't reach the ExitAI server</h2>
+    <p>It may be starting or has stopped. Retrying automatically.</p>
+    <button id="btnRetry" class="btn" type="button">Retry now</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

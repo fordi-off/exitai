@@ -1,0 +1,8 @@
+node_modules/
+
+# Runtime/user data: chat sessions, browser profiles, screenshots, uploads,
+# auth token, logs — all machine-local and regenerated on first run.
+/data/
+
+*.log
+pull.log
